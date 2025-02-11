@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+console.log("🔍 MONGO_URI:", process.env.MONGO_URI);
+console.log("🔍 Railway MONGO_URI:", process.env.MONGO_URI);  // Debugging  // Debugging
 
 const app = express();
 const port = process.env.PORT || 5001;
