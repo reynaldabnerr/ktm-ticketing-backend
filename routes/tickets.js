@@ -14,9 +14,7 @@ router.post("/register", async (req, res) => {
     const ticketId = Math.random().toString(36).substring(2, 10); // Generate Ticket ID
 
     // Generate QR Code
-    const qrCode = await QRCode.toDataURL(
-      `https://yourwebsite.com/validate/${ticketId}`
-    );
+    const qrCode = await QRCode.toDataURL(ticketId);
 
     // Simpan ke database
     const newTicket = new Ticket({ nama, email, noHp, ticketId, qrCode });
