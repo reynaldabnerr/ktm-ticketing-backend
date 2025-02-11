@@ -38,29 +38,28 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// API untuk Scan QR Code dan Check-in
+// API untuk Check-in & Update Status "Hadir"
 router.post("/check-in", async (req, res) => {
   try {
     const { ticketId } = req.body;
-
-    // Cari tiket berdasarkan ticketId
+    
     const ticket = await Ticket.findOne({ ticketId });
 
     if (!ticket) {
-      return res.status(404).json({ success: false, message: "Tiket tidak ditemukan!" });
+      return res.status(404).json({ success: false, message: "❌ Tiket tidak ditemukan!" });
     }
 
     if (ticket.hadir) {
-      return res.status(400).json({ success: false, message: "Tiket sudah digunakan!" });
+      return res.status(400).json({ success: false, message: "⚠️ Tiket sudah digunakan untuk check-in!" });
     }
 
-    // Tandai sebagai hadir
+    // Update status "hadir" menjadi true
     ticket.hadir = true;
     await ticket.save();
 
-    res.json({ success: true, message: "Check-in berhasil!", ticket });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Gagal memproses check-in!", error: err.message });
+    res.json({ success: true, message: "✅ Tiket berhasil check-in!", ticket });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "❌ Gagal melakukan check-in!", error: error.message });
   }
 });
 
