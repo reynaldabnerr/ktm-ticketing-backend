@@ -29,5 +29,5 @@ app.listen(port, () => {
   console.log(`✅ Server berjalan di http://localhost:${port}`);
 });
 
-const ticketRoutes = require("../backend/routes/tickets");
+const ticketRoutes = require("./routes/tickets");
 app.use("/tickets", ticketRoutes);
