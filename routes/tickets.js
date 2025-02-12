@@ -47,7 +47,7 @@ router.post("/register", authMiddleware, async (req, res) => {
 // 🔹 API Check-in & Update Status "Hadir"
 router.post("/check-in", async (req, res) => {
   try {
-    console.log("📥 Data diterima dari frontend:", req.body); // 🔍 Debugging log
+    console.log("📥 Data diterima dari frontend:", req.body);
 
     const { ticketId } = req.body;
     if (!ticketId) {
@@ -65,19 +65,19 @@ router.post("/check-in", async (req, res) => {
     }
 
     if (ticket.hadir) {
-      return res.status(400).json({
-        success: false,
-        message: "⚠️ Tiket sudah digunakan untuk check-in!",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "⚠️ Tiket sudah digunakan untuk check-in!",
+        });
     }
 
-    // ✅ Hanya memperbarui status "hadir", tanpa mengubah field lain
-    ticket.hadir = true;
-    await ticket.save();
+    // ✅ Hanya update status "hadir", tanpa mengubah `userId` atau `buktiTransfer`
+    await Ticket.updateOne({ ticketId }, { $set: { hadir: true } });
 
-    console.log("✅ Tiket berhasil diupdate:", ticket); // 🔍 Debugging log
-
-    res.json({ success: true, message: "✅ Tiket berhasil check-in!", ticket });
+    console.log("✅ Tiket berhasil diupdate:", ticketId);
+    res.json({ success: true, message: "✅ Tiket berhasil check-in!" });
   } catch (error) {
     console.error("❌ Error backend:", error.message);
     res
