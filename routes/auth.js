@@ -9,13 +9,28 @@ const JWT_SECRET = "secret-key"; // Gantilah dengan yang lebih aman
 // Register User
 router.post("/register", async (req, res) => {
   try {
-    const { nama, email, password } = req.body;
+    const { email, password } = req.body;
+
+    // Periksa apakah email sudah terdaftar
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email sudah terdaftar!" });
+    }
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ nama, email, password: hashedPassword });
+
+    // Buat user baru tanpa nama
+    const newUser = new User({ email, password: hashedPassword });
     await newUser.save();
+
     res.json({ success: true, message: "User berhasil didaftarkan!" });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error saat registrasi" });
+    res
+      .status(500)
+      .json({ success: false, message: "Terjadi kesalahan saat registrasi" });
   }
 });
 
