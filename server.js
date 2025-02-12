@@ -1,30 +1,25 @@
-require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 5001;
 
-// 🔥 Pasang CORS Middleware terlebih dahulu
-app.use(
-  cors({
-    origin: "*", // Bisa diganti dengan domain frontend misalnya "https://ktm-ticketing.vercel.app"
-    methods: "GET,POST,PUT,DELETE",
-    allowedHeaders: "Content-Type,Authorization",
-  })
-);
-
-// 🔥 Pasang Middleware JSON sebelum routes
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// 🔥 Koneksi ke MongoDB
+// Koneksi ke MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Database connected!"))
-  .catch((err) => console.error("❌ Database connection error:", err));
+  .catch((err) => {
+    console.error("❌ Database connection error:", err);
+    process.exit(1); // Jika gagal, hentikan server
+  });
 
-// 🔥 Pasang routes setelah middleware
+// Routes
 const authRoutes = require("./routes/auth");
 app.use("/auth", authRoutes);
 
@@ -36,7 +31,7 @@ app.get("/", (req, res) => {
   res.send("🚀 KTM Ticketing API is running...");
 });
 
-// 🔥 Start Server
+// Start Server
 app.listen(port, () => {
-  console.log(`✅ Server berjalan di http://localhost:${port}`);
+  console.log(`✅ Server berjalan di port ${port}`);
 });
