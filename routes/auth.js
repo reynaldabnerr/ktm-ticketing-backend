@@ -1,0 +1,49 @@
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+
+const router = express.Router();
+const JWT_SECRET = "secret-key"; // Gantilah dengan secret yang lebih aman
+
+// Register User
+router.post("/register", async (req, res) => {
+  try {
+    const { nama, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ nama, email, password: hashedPassword });
+    await newUser.save();
+    res.json({ success: true, message: "User berhasil didaftarkan!" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error saat registrasi" });
+  }
+});
+
+// Login User
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email tidak terdaftar!" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res
+        .status(400)
+        .json({ success: false, message: "Password salah!" });
+
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
+    res.json({
+      success: true,
+      token,
+      user: { nama: user.nama, email: user.email },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error saat login" });
+  }
+});
+
+module.exports = router;
