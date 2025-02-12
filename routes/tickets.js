@@ -164,11 +164,16 @@ router.post(
   upload.single("buktiTransfer"),
   async (req, res) => {
     try {
+      console.log("✅ Data dari request body:", req.body);
+      console.log("📸 File bukti transfer:", req.file);
+      console.log("🔑 User dari token:", req.user);
+
       const { nama, noHp } = req.body;
-      const email = req.user.email;
+      const email = req.user.email; // 🔥 Ambil email dari token JWT
       const buktiTransfer = req.file ? req.file.id : null; // 🔥 Simpan ObjectId file
 
       if (!nama || !noHp || !buktiTransfer) {
+        console.log("⚠️ Data tidak lengkap!", { nama, noHp, buktiTransfer });
         return res
           .status(400)
           .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
@@ -190,9 +195,9 @@ router.post(
       const newTicket = new Ticket({
         userId: req.user.id,
         nama,
-        email,
+        email, // 🔥 Gunakan email dari token JWT
         noHp,
-        buktiTransfer, // 🔥 Simpan ID bukti transfer, bukan path file
+        buktiTransfer,
         ticketId,
         qrCode,
       });
@@ -205,6 +210,7 @@ router.post(
         ticket: newTicket,
       });
     } catch (err) {
+      console.error("❌ Error backend:", err.message);
       res.status(500).json({
         success: false,
         message: "❌ Gagal menyimpan data!",
@@ -213,5 +219,4 @@ router.post(
     }
   }
 );
-
 module.exports = router;
