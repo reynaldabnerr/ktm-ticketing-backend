@@ -166,11 +166,13 @@ router.post(
     try {
       console.log("✅ Data dari request body:", req.body);
       console.log("📸 File bukti transfer:", req.file);
-      console.log("🔑 User dari token:", req.user);
+      console.log("🔑 User dari token JWT:", req.user);
 
       const { nama, noHp } = req.body;
-      const email = req.user.email; // 🔥 Ambil email dari token JWT
-      const buktiTransfer = req.file ? req.file.id : null; // 🔥 Simpan ObjectId file
+      const email = req.user.email;
+
+      // 🔥 Ambil path file dari req.file, bukan req.file.id
+      const buktiTransfer = req.file ? req.file.path : null;
 
       if (!nama || !noHp || !buktiTransfer) {
         console.log("⚠️ Data tidak lengkap!", { nama, noHp, buktiTransfer });
@@ -195,9 +197,9 @@ router.post(
       const newTicket = new Ticket({
         userId: req.user.id,
         nama,
-        email, // 🔥 Gunakan email dari token JWT
+        email,
         noHp,
-        buktiTransfer,
+        buktiTransfer, // 🔥 Sekarang menyimpan path file bukti transfer
         ticketId,
         qrCode,
       });
