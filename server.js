@@ -26,6 +26,9 @@ app.use("/auth", authRoutes);
 const ticketRoutes = require("./routes/tickets");
 app.use("/tickets", ticketRoutes);
 
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Endpoint Tes API
 app.get("/", (req, res) => {
   res.send("🚀 KTM Ticketing API is running...");
