@@ -50,7 +50,11 @@ router.post("/login", async (req, res) => {
         .status(400)
         .json({ success: false, message: "Password salah!" });
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
+    // 🔥 Hanya gunakan SATU deklarasi `token` yang benar
+    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
     res.json({
       success: true,
       token,
