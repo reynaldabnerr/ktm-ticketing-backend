@@ -1,15 +1,32 @@
 const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 
-// Konfigurasi penyimpanan gambar bukti transfer
+// 🔥 Pastikan folder `uploads/` ada sebelum menyimpan file
+const uploadDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Konfigurasi penyimpanan file
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Simpan di folder uploads
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname); // Rename file agar unik
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
-const upload = multer({ storage });
+// Filter hanya menerima gambar
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("⚠️ Hanya file gambar yang diperbolehkan!"), false);
+  }
+};
+
+const upload = multer({ storage, fileFilter });
 
 module.exports = upload;
