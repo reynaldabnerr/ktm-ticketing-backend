@@ -4,6 +4,8 @@ const Ticket = require("../models/Ticket");
 const ExcelJS = require("exceljs");
 const fs = require("fs");
 const path = require("path");
+const authMiddleware = require("../middleware/auth"); // 🔥 Tambahkan ini
+const upload = require("../middleware/upload"); // 🔥 Pastikan upload juga ada
 
 const router = express.Router();
 

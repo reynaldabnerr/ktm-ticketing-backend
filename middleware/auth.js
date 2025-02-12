@@ -1,22 +1,25 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "secret-key"; // Sama dengan yang digunakan di login
 
-module.exports = function (req, res, next) {
+module.exports = function authMiddleware(req, res, next) {
   const token = req.header("Authorization");
 
-  if (!token)
+  if (!token) {
     return res
       .status(401)
       .json({
         success: false,
-        message: "Akses ditolak, token tidak ditemukan!",
+        message: "❌ Akses ditolak! Token tidak ditemukan.",
       });
+  }
 
   try {
-    const decoded = jwt.verify(token.replace("Bearer ", ""), JWT_SECRET);
+    const decoded = jwt.verify(
+      token.replace("Bearer ", ""),
+      process.env.JWT_SECRET || "secret-key"
+    );
     req.user = decoded;
     next();
-  } catch (error) {
-    res.status(401).json({ success: false, message: "Token tidak valid!" });
+  } catch (err) {
+    res.status(403).json({ success: false, message: "❌ Token tidak valid!" });
   }
 };
