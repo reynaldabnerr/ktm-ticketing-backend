@@ -221,4 +221,40 @@ router.post(
     }
   }
 );
+
+// API untuk Menandai Hadir Secara Manual
+router.post("/mark-present", async (req, res) => {
+  try {
+    const { ticketId } = req.body;
+    console.log("🔍 Request untuk Tandai Hadir, Ticket ID:", ticketId);
+
+    if (!ticketId) {
+      console.error("⚠️ Ticket ID tidak diberikan!");
+      return res.status(400).json({ success: false, message: "⚠️ Ticket ID diperlukan!" });
+    }
+
+    // Cari tiket berdasarkan ticketId
+    const ticket = await Ticket.findOne({ ticketId });
+
+    if (!ticket) {
+      console.error("❌ Tiket tidak ditemukan!", ticketId);
+      return res.status(404).json({ success: false, message: "❌ Tiket tidak ditemukan!" });
+    }
+
+    if (ticket.hadir) {
+      console.warn("⚠️ Tiket sudah hadir sebelumnya!", ticketId);
+      return res.status(400).json({ success: false, message: "⚠️ Tiket sudah digunakan untuk check-in!" });
+    }
+
+    // Update status hadir
+    ticket.hadir = true;
+    await ticket.save();
+
+    console.log("✅ Tiket berhasil diperbarui:", ticket);
+    res.json({ success: true, message: "✅ Tiket berhasil check-in!", ticket });
+  } catch (error) {
+    console.error("❌ Error backend:", error);
+    res.status(500).json({ success: false, message: "❌ Gagal melakukan check-in!", error: error.message });
+  }
+});
 module.exports = router;
