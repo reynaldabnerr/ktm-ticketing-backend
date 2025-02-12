@@ -237,4 +237,24 @@ router.get("/check-user-ticket", authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: "Gagal mengecek tiket!", error: error.message });
   }
 });
+
+// Hapus tiket berdasarkan ticketId
+router.delete("/delete-ticket/:ticketId", async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const deletedTicket = await Ticket.findOneAndDelete({ ticketId });
+
+    if (!deletedTicket) {
+      return res.status(404).json({ success: false, message: "❌ Tiket tidak ditemukan!" });
+    }
+
+    res.json({ success: true, message: "✅ Tiket berhasil dihapus!" });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "❌ Gagal menghapus tiket!",
+      error: error.message,
+    });
+  }
+});
 module.exports = router;
