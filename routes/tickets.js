@@ -7,8 +7,7 @@ const path = require("path");
 
 const router = express.Router();
 
-// API untuk Registrasi Tiket & Generate QR Code
-router.post("/register", async (req, res) => {
+router.post("/register", authMiddleware, async (req, res) => {
   try {
     const { nama, email, noHp } = req.body;
     const ticketId = Math.random().toString(36).substring(2, 10); // Generate Ticket ID
@@ -16,8 +15,16 @@ router.post("/register", async (req, res) => {
     // Generate QR Code
     const qrCode = await QRCode.toDataURL(ticketId);
 
-    // Simpan ke database
-    const newTicket = new Ticket({ nama, email, noHp, ticketId, qrCode });
+    // Simpan ke database dengan userId
+    const newTicket = new Ticket({
+      userId: req.user.id, // Simpan userId berdasarkan token login
+      nama,
+      email,
+      noHp,
+      ticketId,
+      qrCode,
+    });
+
     await newTicket.save();
 
     res.json({
@@ -26,13 +33,11 @@ router.post("/register", async (req, res) => {
       ticket: newTicket,
     });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Gagal membuat tiket!",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Gagal membuat tiket!",
+      error: err.message,
+    });
   }
 });
 
@@ -117,4 +122,76 @@ router.get("/export-excel", async (req, res) => {
       });
   }
 });
+
+router.get("/my-tickets", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const tickets = await Ticket.find({ userId });
+
+    res.json({ success: true, tickets });
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Gagal mengambil tiket",
+        error: error.message,
+      });
+  }
+});
+router.post(
+  "/input-data",
+  authMiddleware,
+  upload.single("buktiTransfer"),
+  async (req, res) => {
+    try {
+      const { nama, noHp } = req.body;
+      const email = req.user.email; // Ambil email dari user yang login
+      const buktiTransfer = req.file ? `/uploads/${req.file.filename}` : null; // Simpan path gambar
+
+      if (!nama || !noHp || !buktiTransfer) {
+        return res
+          .status(400)
+          .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
+      }
+
+      // Cek apakah user sudah punya tiket
+      const existingTicket = await Ticket.findOne({ userId: req.user.id });
+      if (existingTicket) {
+        return res
+          .status(400)
+          .json({ success: false, message: "⚠️ Anda sudah memiliki tiket!" });
+      }
+
+      // Generate Ticket ID & QR Code
+      const ticketId = Math.random().toString(36).substring(2, 10);
+      const qrCode = await QRCode.toDataURL(ticketId);
+
+      // Simpan ke database
+      const newTicket = new Ticket({
+        userId: req.user.id,
+        nama,
+        email,
+        noHp,
+        buktiTransfer,
+        ticketId,
+        qrCode,
+      });
+
+      await newTicket.save();
+
+      res.json({
+        success: true,
+        message: "✅ Data berhasil disimpan & QR Code dibuat!",
+        ticket: newTicket,
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: "❌ Gagal menyimpan data!",
+        error: err.message,
+      });
+    }
+  }
+);
 module.exports = router;
