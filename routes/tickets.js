@@ -222,4 +222,19 @@ router.post(
     }
   }
 );
+
+// API untuk mengecek apakah user sudah memiliki tiket
+router.get("/check-user-ticket", authMiddleware, async (req, res) => {
+  try {
+    const existingTicket = await Ticket.findOne({ userId: req.user.id });
+
+    if (existingTicket) {
+      return res.json({ success: true, hasTicket: true, ticket: existingTicket });
+    } else {
+      return res.json({ success: true, hasTicket: false });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Gagal mengecek tiket!", error: error.message });
+  }
+});
 module.exports = router;
