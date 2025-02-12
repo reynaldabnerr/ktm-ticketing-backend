@@ -47,7 +47,15 @@ router.post("/register", authMiddleware, async (req, res) => {
 // 🔹 API Check-in & Update Status "Hadir"
 router.post("/check-in", async (req, res) => {
   try {
+    console.log("📥 Data diterima dari frontend:", req.body); // 🔍 Debugging log
+
     const { ticketId } = req.body;
+    if (!ticketId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "⚠️ Ticket ID tidak ditemukan!" });
+    }
+
     const ticket = await Ticket.findOne({ ticketId });
 
     if (!ticket) {
@@ -57,20 +65,21 @@ router.post("/check-in", async (req, res) => {
     }
 
     if (ticket.hadir) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "⚠️ Tiket sudah digunakan untuk check-in!",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "⚠️ Tiket sudah digunakan untuk check-in!",
+      });
     }
 
     // Update status "hadir"
     ticket.hadir = true;
     await ticket.save();
 
+    console.log("✅ Tiket berhasil diupdate:", ticket); // 🔍 Debugging log
+
     res.json({ success: true, message: "✅ Tiket berhasil check-in!", ticket });
   } catch (error) {
+    console.error("❌ Error backend:", error.message);
     res
       .status(500)
       .json({
