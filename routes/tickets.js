@@ -166,7 +166,7 @@ router.post(
     try {
       const { nama, noHp } = req.body;
       const email = req.user.email;
-      const buktiTransfer = req.file ? `/uploads/${req.file.filename}` : null;
+      const buktiTransfer = req.file ? req.file.id : null; // 🔥 Simpan ObjectId file
 
       if (!nama || !noHp || !buktiTransfer) {
         return res
@@ -192,7 +192,7 @@ router.post(
         nama,
         email,
         noHp,
-        buktiTransfer,
+        buktiTransfer, // 🔥 Simpan ID bukti transfer, bukan path file
         ticketId,
         qrCode,
       });
