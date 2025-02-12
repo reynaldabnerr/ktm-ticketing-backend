@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema({
-  nama: { type: String, required: true },
+  nama: { type: String, default: "" },
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   buktiTransfer: { type: String, default: "" }, // Untuk menyimpan gambar bukti transfer
