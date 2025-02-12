@@ -71,7 +71,7 @@ router.post("/check-in", async (req, res) => {
       });
     }
 
-    // Update status "hadir"
+    // ✅ Hanya memperbarui status "hadir", tanpa mengubah field lain
     ticket.hadir = true;
     await ticket.save();
 
