@@ -189,6 +189,7 @@ router.get("/tickets/filter", authMiddleware, async (req, res) => {
 });
 
 // 🔹 API Input Data (Nama, No HP, Bukti Transfer) & Generate QR Code
+// 🔹 API Input Data (Nama, No HP, Bukti Transfer) & Generate QR Code
 router.post("/input-data", authMiddleware, async (req, res) => {
   try {
     const { nama, noHp, events } = req.body;
@@ -204,23 +205,19 @@ router.post("/input-data", authMiddleware, async (req, res) => {
     }
 
     // Pastikan user hanya bisa memilih event yang valid
-    const validEvents = events.filter((event) => allowedEvents.includes(event));
+    const validEvents = JSON.parse(events).filter((event) =>
+      allowedEvents.includes(event)
+    );
     if (validEvents.length === 0) {
       return res
         .status(400)
-        .json({
-          success: false,
-          message: "⚠️ Pilih minimal 1 event yang valid!",
-        });
+        .json({ success: false, message: "⚠️ Pilih minimal 1 event yang valid!" });
     }
 
     // Buat array untuk menyimpan event dengan Ticket ID dan QR Code unik
     const eventsData = await Promise.all(
       validEvents.map(async (event) => {
-        const ticketId = Math.random()
-          .toString(36)
-          .substring(2, 10)
-          .toUpperCase();
+        const ticketId = Math.random().toString(36).substring(2, 10).toUpperCase();
         const qrCode = await QRCode.toDataURL(ticketId);
         return { nama: event, ticketId, qrCode, hadir: false };
       })
@@ -246,11 +243,7 @@ router.post("/input-data", authMiddleware, async (req, res) => {
   } catch (err) {
     res
       .status(500)
-      .json({
-        success: false,
-        message: "❌ Gagal menyimpan data!",
-        error: err.message,
-      });
+      .json({ success: false, message: "❌ Gagal menyimpan data!", error: err.message });
   }
 });
 
