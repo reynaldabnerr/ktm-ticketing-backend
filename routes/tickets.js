@@ -185,7 +185,6 @@ router.get("/tickets/filter", authMiddleware, async (req, res) => {
   }
 });
 
-// 🔹 API Input Data (Nama, No HP, Bukti Transfer) & Generate QR Code
 router.post(
   "/input-data",
   authMiddleware,
@@ -195,61 +194,59 @@ router.post(
       const { nama, noHp, events } = req.body;
       const email = req.user.email;
       const userId = req.user.id;
+      const buktiTransfer = req.file ? req.file.path : null;
 
-      console.log("📥 Data diterima di backend:", {
-        nama,
-        noHp,
-        events,
-        email,
-      });
-
-      // 🔍 Pastikan semua field telah diisi
-      if (!nama || !noHp || !events || events.length === 0 || !req.file) {
+      if (!nama || !noHp || !events || events.length === 0 || !buktiTransfer) {
         return res
           .status(400)
           .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
       }
 
-      // Konversi events menjadi array
       const allowedEvents = ["Event 1", "Event 2", "Event 3", "Event 4"];
-      const selectedEvents = JSON.parse(events).filter((event) =>
+      const validEvents = JSON.parse(events).filter((event) =>
         allowedEvents.includes(event)
       );
 
-      if (selectedEvents.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "⚠️ Pilih minimal 1 event yang valid!",
-        });
+      if (validEvents.length === 0) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "⚠️ Pilih minimal 1 event yang valid!",
+          });
       }
 
-      // 🔥 Ambil URL Bukti Transfer dari Cloudinary
-      const buktiTransferURL = req.file.path;
-
-      console.log("✅ Bukti Transfer URL:", buktiTransferURL);
-
-      // 🔥 Generate QR Code untuk setiap event
+      // 🔥 Pastikan Ticket ID unik
       const eventsData = await Promise.all(
-        selectedEvents.map(async (event) => {
-          const ticketId = Math.random()
-            .toString(36)
-            .substring(2, 10)
-            .toUpperCase();
+        validEvents.map(async (event) => {
+          let ticketId;
+          let isDuplicate = true;
+
+          while (isDuplicate) {
+            ticketId = Math.random()
+              .toString(36)
+              .substring(2, 10)
+              .toUpperCase();
+            const existingTicket = await Ticket.findOne({
+              "events.ticketId": ticketId,
+            });
+            if (!existingTicket) isDuplicate = false;
+          }
+
           const qrCode = await QRCode.toDataURL(ticketId);
           return { nama: event, ticketId, qrCode, hadir: false };
         })
       );
 
-      // 🔥 Simpan tiket ke database
+      // 🔥 Simpan ke database
       const newTicket = new Ticket({
         userId,
         nama,
         email,
         noHp,
-        buktiTransfer: buktiTransferURL, // ✅ URL dari Cloudinary
+        buktiTransfer,
         events: eventsData,
       });
-
       await newTicket.save();
 
       res.json({
@@ -258,12 +255,14 @@ router.post(
         ticket: newTicket,
       });
     } catch (err) {
-      console.error("❌ Error backend:", err.message);
-      res.status(500).json({
-        success: false,
-        message: "❌ Gagal menyimpan data!",
-        error: err.message,
-      });
+      console.error("❌ ERROR INPUT DATA:", err);
+      res
+        .status(500)
+        .json({
+          success: false,
+          message: "❌ Gagal menyimpan data!",
+          error: err.message,
+        });
     }
   }
 );
