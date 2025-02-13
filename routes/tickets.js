@@ -8,7 +8,6 @@ const authMiddleware = require("../middleware/auth"); // Middleware autentikasi
 const upload = require("../middleware/upload");
 const multer = require("multer"); // Middleware upload gambar
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
 const router = express.Router();
 
