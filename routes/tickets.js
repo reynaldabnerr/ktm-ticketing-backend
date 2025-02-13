@@ -188,6 +188,7 @@ router.get("/tickets/filter", authMiddleware, async (req, res) => {
 router.post("/input-data", authMiddleware, async (req, res) => {
   try {
     console.log("🔥 Data dari Frontend:", req.body);
+    console.log("🔥 Bukti Transfer (File):", req.file);
 
     const { nama, noHp, events } = req.body;
     const email = req.user.email;
@@ -195,6 +196,12 @@ router.post("/input-data", authMiddleware, async (req, res) => {
     const buktiTransfer = req.file ? req.file.path : null;
 
     if (!nama || !noHp || !buktiTransfer || !events || events.length === 0) {
+      console.log("❌ Data tidak lengkap!", {
+        nama,
+        noHp,
+        events,
+        buktiTransfer,
+      });
       return res
         .status(400)
         .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
@@ -210,26 +217,24 @@ router.post("/input-data", authMiddleware, async (req, res) => {
       });
     }
 
-    // ✅ Buat ticketId yang unik untuk setiap event yang dipilih
     const eventsData = await Promise.all(
       validEvents.map(async (event) => {
         const ticketId = `${event}-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 10)
-          .toUpperCase()}`; // 🔥 Tambahkan timestamp & random string agar unik
+          .toUpperCase()}`;
         const qrCode = await QRCode.toDataURL(ticketId);
         return { nama: event, ticketId, qrCode, hadir: false };
       })
     );
 
-    // ✅ Simpan ke database dengan format yang benar
     const newTicket = new Ticket({
       userId,
       nama,
       email,
       noHp,
       buktiTransfer,
-      events: eventsData, // Array event dengan ticketId unik
+      events: eventsData,
     });
 
     await newTicket.save();
