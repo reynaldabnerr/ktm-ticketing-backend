@@ -228,8 +228,11 @@ router.post(
           const ticketId = `${event}-${Date.now()}-${Math.random()
             .toString(36)
             .substring(2, 10)
-            .toUpperCase()}`;
+            .toUpperCase()}`; // ✅ Pastikan unik untuk setiap event & user
           const qrCode = await QRCode.toDataURL(ticketId);
+
+          console.log(`🎟️ Tiket dibuat untuk ${event}: ${ticketId}`); // 🔥 Debugging
+
           return { nama: event, ticketId, qrCode, hadir: false };
         })
       );

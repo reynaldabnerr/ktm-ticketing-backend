@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema({
   nama: { type: String, required: true },
-  ticketId: { type: String, required: true }, // ✅ Hapus `unique: true`
+  ticketId: { type: String, required: true, unique: true, default: "" }, // ✅ Tambahkan `default: ""`
   qrCode: { type: String, required: true },
   hadir: { type: Boolean, default: false },
 });
