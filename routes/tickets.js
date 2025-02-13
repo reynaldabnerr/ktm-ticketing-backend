@@ -268,17 +268,27 @@ router.post(
   }
 );
 
-router.delete("/delete-ticket/:ticketId", async (req, res) => {
+router.delete("/delete-ticket/:eventId", async (req, res) => {
   try {
-    const { ticketId } = req.params;
-    console.log("🗑️ Menghapus tiket dengan ID:", ticketId);
+    const { eventId } = req.params;
+    console.log("🗑️ Menghapus tiket dengan Event ID:", eventId);
 
-    const ticket = await Ticket.findOneAndDelete({ "events._id": ticketId });
+    // 🔥 Mencari tiket yang memiliki event dengan _id tersebut
+    const ticket = await Ticket.findOneAndUpdate(
+      { "events._id": eventId },
+      { $pull: { events: { _id: eventId } } }, // 🔥 Menghapus event dari array
+      { new: true }
+    );
 
     if (!ticket) {
       return res
         .status(404)
         .json({ success: false, message: "❌ Tiket tidak ditemukan!" });
+    }
+
+    // Jika semua event dihapus, hapus juga tiket utama
+    if (ticket.events.length === 0) {
+      await Ticket.findByIdAndDelete(ticket._id);
     }
 
     res.json({ success: true, message: "✅ Tiket berhasil dihapus!" });
