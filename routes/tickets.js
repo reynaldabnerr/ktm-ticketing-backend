@@ -6,8 +6,6 @@ const fs = require("fs");
 const path = require("path");
 const authMiddleware = require("../middleware/auth"); // Middleware autentikasi
 const upload = require("../middleware/upload");
-const multer = require("multer"); // Middleware upload gambar
-const storage = multer.memoryStorage();
 
 const router = express.Router();
 
@@ -46,19 +44,13 @@ router.post("/register", authMiddleware, async (req, res) => {
   }
 });
 
-// 🔹 API Check-in & Update Status "Hadir"
+// 🔥 Check-in berdasarkan ticketId yang ada di dalam array events
 router.post("/check-in", async (req, res) => {
   try {
-    console.log("📥 Data diterima dari frontend:", req.body);
-
     const { ticketId } = req.body;
-    if (!ticketId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "⚠️ Ticket ID tidak ditemukan!" });
-    }
 
-    const ticket = await Ticket.findOne({ ticketId });
+    // Cari tiket yang memiliki ticketId di dalam array `events`
+    const ticket = await Ticket.findOne({ "events.ticketId": ticketId });
 
     if (!ticket) {
       return res
@@ -66,25 +58,40 @@ router.post("/check-in", async (req, res) => {
         .json({ success: false, message: "❌ Tiket tidak ditemukan!" });
     }
 
-    if (ticket.hadir) {
-      return res.status(400).json({
-        success: false,
-        message: "⚠️ Tiket sudah digunakan untuk check-in!",
-      });
+    // Temukan event yang sesuai di dalam array `events`
+    const eventIndex = ticket.events.findIndex((e) => e.ticketId === ticketId);
+    if (eventIndex === -1) {
+      return res
+        .status(404)
+        .json({ success: false, message: "❌ Tiket tidak ditemukan di event!" });
     }
 
-    // ✅ Hanya update status "hadir", tanpa mengubah `userId` atau `buktiTransfer`
-    await Ticket.updateOne({ ticketId }, { $set: { hadir: true } });
+    if (ticket.events[eventIndex].hadir) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "⚠️ Tiket sudah digunakan untuk check-in!",
+        });
+    }
 
-    console.log("✅ Tiket berhasil diupdate:", ticketId);
-    res.json({ success: true, message: "✅ Tiket berhasil check-in!" });
-  } catch (error) {
-    console.error("❌ Error backend:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "❌ Gagal melakukan check-in!",
-      error: error.message,
+    // 🔥 Update status hadir hanya untuk tiket yang sesuai
+    ticket.events[eventIndex].hadir = true;
+    await ticket.save();
+
+    res.json({
+      success: true,
+      message: "✅ Tiket berhasil check-in!",
+      ticket,
     });
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "❌ Gagal melakukan check-in!",
+        error: error.message,
+      });
   }
 });
 
