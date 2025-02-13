@@ -109,9 +109,9 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// 🔹 API Export Data ke Excel
 router.get("/export-excel", async (req, res) => {
   try {
+    const { event } = req.query; // ✅ Ambil parameter event dari request
     const tickets = await Ticket.find();
 
     const workbook = new ExcelJS.Workbook();
@@ -121,27 +121,40 @@ router.get("/export-excel", async (req, res) => {
       { header: "Nama", key: "nama", width: 30 },
       { header: "Email", key: "email", width: 30 },
       { header: "No HP", key: "noHp", width: 20 },
-      { header: "Ticket ID", key: "ticketId", width: 15 },
+      { header: "Event", key: "event", width: 20 },
+      { header: "Ticket ID", key: "ticketId", width: 25 },
       { header: "Hadir", key: "hadir", width: 10 },
     ];
 
     tickets.forEach((ticket) => {
-      worksheet.addRow({
-        nama: ticket.nama,
-        email: ticket.email,
-        noHp: ticket.noHp,
-        ticketId: ticket.ticketId,
-        hadir: ticket.hadir ? "✅" : "❌",
+      ticket.events.forEach((ticketEvent) => {
+        // ✅ Jika ada filter event, hanya tambahkan event yang sesuai
+        if (!event || ticketEvent.nama === event) {
+          worksheet.addRow({
+            nama: ticket.nama,
+            email: ticket.email,
+            noHp: ticket.noHp,
+            event: ticketEvent.nama,
+            ticketId: ticketEvent.ticketId,
+            hadir: ticketEvent.hadir ? "✅" : "❌",
+          });
+        }
       });
     });
 
-    const filePath = path.join(__dirname, "../Daftar_Customer.xlsx");
-    await workbook.xlsx.writeFile(filePath);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Daftar_Customer.xlsx`
+    );
 
-    res.download(filePath, "Daftar_Customer.xlsx", () => {
-      fs.unlinkSync(filePath);
-    });
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (err) {
+    console.error("❌ Gagal export data:", err);
     res.status(500).json({
       success: false,
       message: "❌ Gagal export data!",
