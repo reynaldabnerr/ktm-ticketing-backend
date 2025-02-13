@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema({
   nama: { type: String, required: true },
-  ticketId: { type: String, required: true, unique: true }, // ✅ Pastikan unik per event
+  ticketId: { type: String, required: true }, // ✅ Hapus `unique: true`
   qrCode: { type: String, required: true },
   hadir: { type: Boolean, default: false },
 });
@@ -13,7 +13,7 @@ const ticketSchema = new mongoose.Schema({
   email: { type: String, required: true },
   noHp: { type: String, required: true },
   buktiTransfer: { type: String, required: true }, // Cloudinary URL
-  events: { type: [eventSchema], required: true }, // ✅ Array event dengan `ticketId` unik
+  events: { type: [eventSchema], required: true }, // ✅ Array event tanpa unique
 });
 
 const Ticket = mongoose.model("Ticket", ticketSchema);
