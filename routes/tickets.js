@@ -109,15 +109,30 @@ router.get("/all", async (req, res) => {
   }
 });
 
+// 🔹 API Export Data ke Excel dengan Nomor Urut & Filter Event
 router.get("/export-excel", async (req, res) => {
   try {
-    const { event } = req.query; // ✅ Ambil parameter event dari request
-    const tickets = await Ticket.find();
+    const { event } = req.query; // Ambil filter event dari query parameter
+
+    // 🔥 Ambil semua tiket atau filter berdasarkan event jika diberikan
+    let tickets = await Ticket.find();
+    if (event) {
+      tickets = tickets
+        .map((ticket) => {
+          const filteredEvents = ticket.events.filter((e) => e.nama === event);
+          return filteredEvents.length > 0
+            ? { ...ticket._doc, events: filteredEvents }
+            : null;
+        })
+        .filter((ticket) => ticket !== null);
+    }
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Daftar Customer");
 
+    // ✅ Tambahkan Header dengan Nomor Urut
     worksheet.columns = [
+      { header: "No", key: "no", width: 10 },
       { header: "Nama", key: "nama", width: 30 },
       { header: "Email", key: "email", width: 30 },
       { header: "No HP", key: "noHp", width: 20 },
@@ -126,36 +141,30 @@ router.get("/export-excel", async (req, res) => {
       { header: "Hadir", key: "hadir", width: 10 },
     ];
 
+    // 🔥 Tambahkan data ke dalam file Excel
+    let rowNumber = 1;
     tickets.forEach((ticket) => {
-      ticket.events.forEach((ticketEvent) => {
-        // ✅ Jika ada filter event, hanya tambahkan event yang sesuai
-        if (!event || ticketEvent.nama === event) {
-          worksheet.addRow({
-            no: rowNumber++,
-            nama: ticket.nama,
-            email: ticket.email,
-            noHp: ticket.noHp,
-            event: ticketEvent.nama,
-            ticketId: ticketEvent.ticketId,
-            hadir: ticketEvent.hadir ? "✅" : "❌",
-          });
-        }
+      ticket.events.forEach((event) => {
+        worksheet.addRow({
+          no: rowNumber++, // ✅ Tambahkan nomor urut
+          nama: ticket.nama,
+          email: ticket.email,
+          noHp: ticket.noHp,
+          event: event.nama,
+          ticketId: event.ticketId,
+          hadir: event.hadir ? "✅" : "❌",
+        });
       });
     });
 
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=Daftar_Customer.xlsx`
-    );
+    const filePath = path.join(__dirname, "../Daftar_Customer.xlsx");
+    await workbook.xlsx.writeFile(filePath);
 
-    await workbook.xlsx.write(res);
-    res.end();
+    res.download(filePath, "Daftar_Customer.xlsx", () => {
+      fs.unlinkSync(filePath);
+    });
   } catch (err) {
-    console.error("❌ Gagal export data:", err);
+    console.error("❌ Error export data:", err);
     res.status(500).json({
       success: false,
       message: "❌ Gagal export data!",
