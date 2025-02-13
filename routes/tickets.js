@@ -189,54 +189,70 @@ router.get("/tickets/filter", authMiddleware, async (req, res) => {
 });
 
 // 🔹 API Input Data (Nama, No HP, Bukti Transfer) & Generate QR Code
-router.post(
-  "/input-data",
-  authMiddleware,
-  upload.single("buktiTransfer"),
-  async (req, res) => {
-    try {
-      const { nama, noHp, events } = req.body;
-      const email = req.user.email;
-      const buktiTransfer = req.file ? req.file.path : null;
+router.post("/input-data", authMiddleware, async (req, res) => {
+  try {
+    const { nama, noHp, events } = req.body;
+    const email = req.user.email;
+    const userId = req.user.id;
+    const buktiTransfer = req.file ? req.file.path : null; // URL dari Cloudinary
 
-      if (!nama || !noHp || !buktiTransfer || !events || events.length === 0) {
-        return res
-          .status(400)
-          .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
-      }
+    const allowedEvents = ["Event 1", "Event 2", "Event 3", "Event 4"];
+    if (!nama || !noHp || !buktiTransfer || !events || events.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
+    }
 
-      const ticketId = Math.random().toString(36).substring(2, 10);
-      const qrCode = await QRCode.toDataURL(ticketId);
-
-      const newTicket = new Ticket({
-        userId: req.user.id,
-        nama,
-        email,
-        noHp,
-        buktiTransfer,
-        ticketId,
-        qrCode,
-        events, // 🆕 Simpan event yang dipilih
-      });
-
-      await newTicket.save();
-
-      res.json({
-        success: true,
-        message: "✅ Data berhasil disimpan & QR Code dibuat!",
-        ticket: newTicket,
-      });
-    } catch (err) {
-      res
-        .status(500)
+    // Pastikan user hanya bisa memilih event yang valid
+    const validEvents = events.filter((event) => allowedEvents.includes(event));
+    if (validEvents.length === 0) {
+      return res
+        .status(400)
         .json({
           success: false,
-          message: "❌ Gagal menyimpan data!",
-          error: err.message,
+          message: "⚠️ Pilih minimal 1 event yang valid!",
         });
     }
+
+    // Buat array untuk menyimpan event dengan Ticket ID dan QR Code unik
+    const eventsData = await Promise.all(
+      validEvents.map(async (event) => {
+        const ticketId = Math.random()
+          .toString(36)
+          .substring(2, 10)
+          .toUpperCase();
+        const qrCode = await QRCode.toDataURL(ticketId);
+        return { nama: event, ticketId, qrCode, hadir: false };
+      })
+    );
+
+    // Simpan ke database
+    const newTicket = new Ticket({
+      userId,
+      nama,
+      email,
+      noHp,
+      buktiTransfer, // URL bukti transfer
+      events: eventsData, // Array berisi beberapa tiket dari event yang dipilih
+    });
+
+    await newTicket.save();
+
+    res.json({
+      success: true,
+      message: "✅ Data berhasil disimpan!",
+      ticket: newTicket,
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "❌ Gagal menyimpan data!",
+        error: err.message,
+      });
   }
-);
+});
 
 // API untuk mengecek apakah user sudah memiliki tiket
 router.get("/check-user-ticket", authMiddleware, async (req, res) => {
