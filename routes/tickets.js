@@ -67,12 +67,10 @@ router.post("/check-in", async (req, res) => {
     }
 
     if (ticket.hadir) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "⚠️ Tiket sudah digunakan untuk check-in!",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "⚠️ Tiket sudah digunakan untuk check-in!",
+      });
     }
 
     // ✅ Hanya update status "hadir", tanpa mengubah `userId` atau `buktiTransfer`
@@ -82,13 +80,11 @@ router.post("/check-in", async (req, res) => {
     res.json({ success: true, message: "✅ Tiket berhasil check-in!" });
   } catch (error) {
     console.error("❌ Error backend:", error.message);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "❌ Gagal melakukan check-in!",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "❌ Gagal melakukan check-in!",
+      error: error.message,
+    });
   }
 });
 
@@ -98,13 +94,11 @@ router.get("/all", async (req, res) => {
     const tickets = await Ticket.find().sort({ createdAt: -1 });
     res.json({ success: true, tickets });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "❌ Gagal mengambil data tiket!",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "❌ Gagal mengambil data tiket!",
+      error: err.message,
+    });
   }
 });
 
@@ -141,13 +135,11 @@ router.get("/export-excel", async (req, res) => {
       fs.unlinkSync(filePath);
     });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "❌ Gagal export data!",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "❌ Gagal export data!",
+      error: err.message,
+    });
   }
 });
 
@@ -158,13 +150,11 @@ router.get("/my-tickets", authMiddleware, async (req, res) => {
 
     res.json({ success: true, tickets });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "❌ Gagal mengambil tiket",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "❌ Gagal mengambil tiket",
+      error: error.message,
+    });
   }
 });
 
@@ -180,16 +170,15 @@ router.get("/tickets/filter", authMiddleware, async (req, res) => {
     const tickets = await Ticket.find(query).sort({ createdAt: -1 });
     res.json({ success: true, tickets });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Gagal mengambil data tiket!",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data tiket!",
+      error: err.message,
+    });
   }
 });
 
+// 🔹 API Input Data (Nama, No HP, Bukti Transfer) & Generate QR Code
 router.post(
   "/input-data",
   authMiddleware,
@@ -221,91 +210,56 @@ router.post(
       );
 
       if (selectedEvents.length === 0) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "⚠️ Pilih minimal 1 event yang valid!",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "⚠️ Pilih minimal 1 event yang valid!",
+        });
       }
 
-      // 🔥 Upload Bukti Transfer ke Cloudinary
-      console.log("🚀 Uploading file to Cloudinary...");
-      const result = await cloudinary.uploader.upload_stream(
-        { folder: "bukti_transfer" },
-        async (error, uploadResult) => {
-          if (error) {
-            console.error("❌ Cloudinary Upload Error:", error);
-            return res
-              .status(500)
-              .json({
-                success: false,
-                message: "❌ Gagal mengunggah bukti transfer!",
-              });
-          }
+      // 🔥 Ambil URL Bukti Transfer dari Cloudinary
+      const buktiTransferURL = req.file.path;
 
-          console.log("✅ Bukti Transfer Uploaded:", uploadResult.secure_url);
+      console.log("✅ Bukti Transfer URL:", buktiTransferURL);
 
-          // 🔥 Generate QR Code untuk setiap event
-          const eventsData = await Promise.all(
-            selectedEvents.map(async (event) => {
-              const ticketId = Math.random()
-                .toString(36)
-                .substring(2, 10)
-                .toUpperCase();
-              const qrCode = await QRCode.toDataURL(ticketId);
-              return { nama: event, ticketId, qrCode, hadir: false };
-            })
-          );
-
-          // 🔥 Simpan tiket ke database
-          const newTicket = new Ticket({
-            userId,
-            nama,
-            email,
-            noHp,
-            buktiTransfer: uploadResult.secure_url, // URL dari Cloudinary
-            events: eventsData,
-          });
-
-          await newTicket.save();
-
-          res.json({
-            success: true,
-            message: "✅ Data berhasil disimpan!",
-            ticket: newTicket,
-          });
-        }
+      // 🔥 Generate QR Code untuk setiap event
+      const eventsData = await Promise.all(
+        selectedEvents.map(async (event) => {
+          const ticketId = Math.random()
+            .toString(36)
+            .substring(2, 10)
+            .toUpperCase();
+          const qrCode = await QRCode.toDataURL(ticketId);
+          return { nama: event, ticketId, qrCode, hadir: false };
+        })
       );
 
-      result.end(req.file.buffer); // Kirim file ke Cloudinary
+      // 🔥 Simpan tiket ke database
+      const newTicket = new Ticket({
+        userId,
+        nama,
+        email,
+        noHp,
+        buktiTransfer: buktiTransferURL, // ✅ URL dari Cloudinary
+        events: eventsData,
+      });
+
+      await newTicket.save();
+
+      res.json({
+        success: true,
+        message: "✅ Data berhasil disimpan!",
+        ticket: newTicket,
+      });
     } catch (err) {
       console.error("❌ Error backend:", err.message);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "❌ Gagal menyimpan data!",
-          error: err.message,
-        });
+      res.status(500).json({
+        success: false,
+        message: "❌ Gagal menyimpan data!",
+        error: err.message,
+      });
     }
   }
 );
-
-// API untuk mengecek apakah user sudah memiliki tiket
-router.get("/check-user-ticket", authMiddleware, async (req, res) => {
-  try {
-    const existingTicket = await Ticket.findOne({ userId: req.user.id });
-
-    if (existingTicket) {
-      return res.json({ success: true, hasTicket: true, ticket: existingTicket });
-    } else {
-      return res.json({ success: true, hasTicket: false });
-    }
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Gagal mengecek tiket!", error: error.message });
-  }
-});
 
 // Hapus tiket berdasarkan ticketId
 router.delete("/delete-ticket/:ticketId", async (req, res) => {
@@ -314,7 +268,9 @@ router.delete("/delete-ticket/:ticketId", async (req, res) => {
     const deletedTicket = await Ticket.findOneAndDelete({ ticketId });
 
     if (!deletedTicket) {
-      return res.status(404).json({ success: false, message: "❌ Tiket tidak ditemukan!" });
+      return res
+        .status(404)
+        .json({ success: false, message: "❌ Tiket tidak ditemukan!" });
     }
 
     res.json({ success: true, message: "✅ Tiket berhasil dihapus!" });
