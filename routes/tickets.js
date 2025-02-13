@@ -269,24 +269,43 @@ router.post(
 );
 
 // Hapus tiket berdasarkan ticketId
-router.delete("/delete-ticket/:ticketId", async (req, res) => {
-  try {
-    const { ticketId } = req.params;
-    const deletedTicket = await Ticket.findOneAndDelete({ ticketId });
+router.delete(
+  "/delete-ticket/:ticketId/:eventTicketId",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const { ticketId, eventTicketId } = req.params;
 
-    if (!deletedTicket) {
-      return res
-        .status(404)
-        .json({ success: false, message: "❌ Tiket tidak ditemukan!" });
+      // Cari tiket berdasarkan ID
+      const ticket = await Ticket.findById(ticketId);
+      if (!ticket) {
+        return res
+          .status(404)
+          .json({ success: false, message: "❌ Tiket tidak ditemukan!" });
+      }
+
+      // Hapus event spesifik berdasarkan eventTicketId
+      ticket.events = ticket.events.filter(
+        (event) => event.ticketId !== eventTicketId
+      );
+
+      // Jika tidak ada event tersisa, hapus tiket sepenuhnya
+      if (ticket.events.length === 0) {
+        await Ticket.findByIdAndDelete(ticketId);
+      } else {
+        await ticket.save(); // Simpan perubahan jika masih ada event tersisa
+      }
+
+      res.json({ success: true, message: "✅ Tiket berhasil dihapus!" });
+    } catch (err) {
+      res
+        .status(500)
+        .json({
+          success: false,
+          message: "❌ Gagal menghapus tiket!",
+          error: err.message,
+        });
     }
-
-    res.json({ success: true, message: "✅ Tiket berhasil dihapus!" });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "❌ Gagal menghapus tiket!",
-      error: error.message,
-    });
   }
-});
+);
 module.exports = router;
