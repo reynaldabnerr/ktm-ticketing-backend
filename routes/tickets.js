@@ -185,74 +185,81 @@ router.get("/tickets/filter", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/input-data", authMiddleware, async (req, res) => {
-  try {
-    console.log("🔥 Data dari Frontend:", req.body);
-    console.log("🔥 Bukti Transfer (File):", req.file);
+router.post(
+  "/input-data",
+  authMiddleware,
+  upload.single("buktiTransfer"),
+  async (req, res) => {
+    try {
+      console.log("🔥 Data dari Frontend:", req.body);
+      console.log("🔥 Bukti Transfer (File):", req.file);
 
-    const { nama, noHp, events } = req.body;
-    const email = req.user.email;
-    const userId = req.user.id;
-    const buktiTransfer = req.file ? req.file.path : null;
+      const { nama, noHp, events } = req.body;
+      const email = req.user.email;
+      const userId = req.user.id;
+      const buktiTransfer = req.file ? req.file.path : null;
 
-    if (!nama || !noHp || !buktiTransfer || !events || events.length === 0) {
-      console.log("❌ Data tidak lengkap!", {
+      if (!nama || !noHp || !buktiTransfer || !events || events.length === 0) {
+        console.log("❌ Data tidak lengkap!", {
+          nama,
+          noHp,
+          events,
+          buktiTransfer,
+        });
+        return res
+          .status(400)
+          .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
+      }
+
+      const allowedEvents = ["Event 1", "Event 2", "Event 3", "Event 4"];
+      const validEvents = JSON.parse(events).filter((event) =>
+        allowedEvents.includes(event)
+      );
+
+      if (validEvents.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "⚠️ Pilih minimal 1 event yang valid!",
+        });
+      }
+
+      const eventsData = await Promise.all(
+        validEvents.map(async (event) => {
+          const ticketId = `${event}-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 10)
+            .toUpperCase()}`;
+          const qrCode = await QRCode.toDataURL(ticketId);
+          return { nama: event, ticketId, qrCode, hadir: false };
+        })
+      );
+
+      const newTicket = new Ticket({
+        userId,
         nama,
+        email,
         noHp,
-        events,
         buktiTransfer,
+        events: eventsData,
       });
-      return res
-        .status(400)
-        .json({ success: false, message: "⚠️ Semua data wajib diisi!" });
-    }
 
-    const allowedEvents = ["Event 1", "Event 2", "Event 3", "Event 4"];
-    const validEvents = events.filter((event) => allowedEvents.includes(event));
+      await newTicket.save();
 
-    if (validEvents.length === 0) {
-      return res.status(400).json({
+      res.json({
+        success: true,
+        message: "✅ Data berhasil disimpan!",
+        ticket: newTicket,
+      });
+    } catch (err) {
+      console.error("❌ ERROR INPUT DATA:", err);
+      res.status(500).json({
         success: false,
-        message: "⚠️ Pilih minimal 1 event yang valid!",
+        message: "❌ Gagal menyimpan data!",
+        error: err.message,
       });
     }
-
-    const eventsData = await Promise.all(
-      validEvents.map(async (event) => {
-        const ticketId = `${event}-${Date.now()}-${Math.random()
-          .toString(36)
-          .substring(2, 10)
-          .toUpperCase()}`;
-        const qrCode = await QRCode.toDataURL(ticketId);
-        return { nama: event, ticketId, qrCode, hadir: false };
-      })
-    );
-
-    const newTicket = new Ticket({
-      userId,
-      nama,
-      email,
-      noHp,
-      buktiTransfer,
-      events: eventsData,
-    });
-
-    await newTicket.save();
-
-    res.json({
-      success: true,
-      message: "✅ Data berhasil disimpan!",
-      ticket: newTicket,
-    });
-  } catch (err) {
-    console.error("❌ ERROR INPUT DATA:", err);
-    res.status(500).json({
-      success: false,
-      message: "❌ Gagal menyimpan data!",
-      error: err.message,
-    });
   }
-});
+);
 
 router.delete("/delete-ticket/:eventId", async (req, res) => {
   try {
